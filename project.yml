@@ -1,0 +1,104 @@
+name: XPlaneScreenExtension
+
+options:
+  bundleIdPrefix: eu.dries
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGN_STYLE: Automatic
+    ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+    PRODUCT_BUNDLE_IDENTIFIER: eu.dries.xplanescreenextension
+
+# Two explicit platform targets sharing one Sources/ tree and one bundle
+# identifier, rather than one Xcode-16-style unified multi-destination target:
+# this XcodeGen version's `platform: [iOS, macOS]` shortcut expands into
+# separate, confusingly-named targets, so explicit targets give clearer
+# control. Same bundle identifier on both lets them later live under one
+# App Store Connect "Universal Purchase" listing.
+targets:
+  XPlaneScreenExtension-iOS:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Sources/XPlaneScreenExtension
+    preBuildScripts:
+      - name: SwiftLint
+        script: scripts/run-swiftlint.sh
+        basedOnDependencyAnalysis: false
+      - name: SwiftFormat Lint
+        script: scripts/run-swiftformat.sh
+        basedOnDependencyAnalysis: false
+    info:
+      path: Generated/XPlaneScreenExtension-iOS-Info.plist
+      properties:
+        CFBundleDisplayName: XPlaneScreenExtension
+        UILaunchScreen: {}
+        ITSAppUsesNonExemptEncryption: false
+        NSLocalNetworkUsageDescription: >-
+          XPlaneScreenExtension connects to the ExtPlane plugin running
+          inside X-Plane on your local network to show live flight
+          instruments and send control commands.
+
+  XPlaneScreenExtension-macOS:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: Sources/XPlaneScreenExtension
+    preBuildScripts:
+      - name: SwiftLint
+        script: scripts/run-swiftlint.sh
+        basedOnDependencyAnalysis: false
+      - name: SwiftFormat Lint
+        script: scripts/run-swiftformat.sh
+        basedOnDependencyAnalysis: false
+    settings:
+      base:
+        ENABLE_HARDENED_RUNTIME: YES
+        COMBINE_HIDPI_IMAGES: YES
+    info:
+      path: Generated/XPlaneScreenExtension-macOS-Info.plist
+      properties:
+        CFBundleDisplayName: XPlaneScreenExtension
+        ITSAppUsesNonExemptEncryption: false
+        NSLocalNetworkUsageDescription: >-
+          XPlaneScreenExtension connects to the ExtPlane plugin running
+          inside X-Plane on your local network to show live flight
+          instruments and send control commands.
+
+  XPlaneScreenExtensionTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: Tests/XPlaneScreenExtensionTests
+    dependencies:
+      - target: XPlaneScreenExtension-macOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: eu.dries.xplanescreenextension.tests
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  XPlaneScreenExtension-iOS:
+    build:
+      targets:
+        XPlaneScreenExtension-iOS: all
+    run:
+      config: Debug
+
+  XPlaneScreenExtension-macOS:
+    build:
+      targets:
+        XPlaneScreenExtension-macOS: all
+        XPlaneScreenExtensionTests: [test]
+    test:
+      targets:
+        - XPlaneScreenExtensionTests
+    run:
+      config: Debug
