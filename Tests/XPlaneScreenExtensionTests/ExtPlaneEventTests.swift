@@ -36,8 +36,10 @@ struct ExtPlaneEventTests {
 
     @Test("float array update")
     func floatArrayUpdate() {
-        let event = ExtPlaneEvent.parse(line: "ufa sim/flightmodel/position/q [0.84599,-0.00730657,0.00933933,0.533067]")
-        #expect(event == .update(ref: "sim/flightmodel/position/q", value: .floatArray([0.84599, -0.00730657, 0.00933933, 0.533067])))
+        let line = "ufa sim/flightmodel/position/q [0.84599,-0.00730657,0.00933933,0.533067]"
+        let event = ExtPlaneEvent.parse(line: line)
+        let expected = ExtPlaneValue.floatArray([0.84599, -0.00730657, 0.00933933, 0.533067])
+        #expect(event == .update(ref: "sim/flightmodel/position/q", value: expected))
     }
 
     @Test("int array update")
@@ -54,8 +56,9 @@ struct ExtPlaneEventTests {
 
     @Test("base64 data update")
     func dataUpdate() throws {
-        let event = ExtPlaneEvent.parse(line: "ub sim/aircraft/view/acf_descrip RXh0UGxhbmUgU2ltdWxhdGVkIENvbm5lY3Rpb24=")
-        let expectedData = try #require(Data(base64Encoded: "RXh0UGxhbmUgU2ltdWxhdGVkIENvbm5lY3Rpb24="))
+        let base64 = "RXh0UGxhbmUgU2ltdWxhdGVkIENvbm5lY3Rpb24="
+        let event = ExtPlaneEvent.parse(line: "ub sim/aircraft/view/acf_descrip \(base64)")
+        let expectedData = try #require(Data(base64Encoded: base64))
         #expect(event == .update(ref: "sim/aircraft/view/acf_descrip", value: .data(expectedData)))
     }
 
@@ -70,7 +73,8 @@ struct ExtPlaneEventTests {
         #expect(ExtPlaneEvent.parse(line: "nonsense") == .unrecognized("nonsense"))
         #expect(ExtPlaneEvent.parse(line: "EXTPLANE not-a-number") == .unrecognized("EXTPLANE not-a-number"))
         #expect(ExtPlaneEvent.parse(line: "ui some/ref not-a-number") == .unrecognized("ui some/ref not-a-number"))
-        #expect(ExtPlaneEvent.parse(line: "uia some/ref [1,not-a-number]") == .unrecognized("uia some/ref [1,not-a-number]"))
+        let badArrayLine = "uia some/ref [1,not-a-number]"
+        #expect(ExtPlaneEvent.parse(line: badArrayLine) == .unrecognized(badArrayLine))
         #expect(ExtPlaneEvent.parse(line: "uz some/ref 1") == .unrecognized("uz some/ref 1"))
     }
 }

@@ -3,7 +3,7 @@ import Foundation
 /// A command the client can send to ExtPlane, as defined in the ExtPlane README's
 /// "Protocol Input" section. `wireFormat` is the line to send, without the
 /// trailing newline (`ExtPlaneConnection` appends it).
-enum ExtPlaneCommand: Equatable {
+enum ExtPlaneCommand: Equatable, Sendable {
     case subscribe(ref: String, modifiers: [String] = [], accuracy: Double? = nil)
     case unsubscribe(ref: String)
     case setScalar(ref: String, value: Double)

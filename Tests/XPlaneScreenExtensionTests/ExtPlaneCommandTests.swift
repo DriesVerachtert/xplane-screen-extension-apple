@@ -34,7 +34,8 @@ struct ExtPlaneCommandTests {
 
     @Test("get")
     func get() {
-        #expect(ExtPlaneCommand.get(ref: "sim/aircraft/engine/acf_num_engines").wireFormat == "get sim/aircraft/engine/acf_num_engines")
+        let command = ExtPlaneCommand.get(ref: "sim/aircraft/engine/acf_num_engines")
+        #expect(command.wireFormat == "get sim/aircraft/engine/acf_num_engines")
     }
 
     @Test("set scalar")
@@ -74,7 +75,8 @@ struct ExtPlaneCommandTests {
 
     @Test("command once/begin/end")
     func commandLifecycle() {
-        #expect(ExtPlaneCommand.commandOnce("sim/flight_controls/landing_gear_toggle").wireFormat == "cmd once sim/flight_controls/landing_gear_toggle")
+        let gearToggle = ExtPlaneCommand.commandOnce("sim/flight_controls/landing_gear_toggle")
+        #expect(gearToggle.wireFormat == "cmd once sim/flight_controls/landing_gear_toggle")
         #expect(ExtPlaneCommand.commandBegin("sim/engines/starter_1").wireFormat == "cmd begin sim/engines/starter_1")
         #expect(ExtPlaneCommand.commandEnd("sim/engines/starter_1").wireFormat == "cmd end sim/engines/starter_1")
     }

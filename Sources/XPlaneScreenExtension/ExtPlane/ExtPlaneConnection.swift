@@ -3,13 +3,13 @@ import Network
 
 /// A TCP connection to the ExtPlane plugin: sends `ExtPlaneCommand`s and
 /// publishes parsed `ExtPlaneEvent`s as they arrive.
-actor ExtPlaneConnection {
+actor ExtPlaneConnection: ExtPlaneTransport {
     enum Failure: Error {
         case notConnected
         case invalidPort(UInt16)
     }
 
-    let events: AsyncStream<ExtPlaneEvent>
+    nonisolated let events: AsyncStream<ExtPlaneEvent>
 
     private let continuation: AsyncStream<ExtPlaneEvent>.Continuation
     private let queue = DispatchQueue(label: "eu.dries.xplanescreenextension.extplane-connection")

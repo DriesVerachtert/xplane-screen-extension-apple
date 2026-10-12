@@ -1,7 +1,7 @@
 import Foundation
 
 /// A dataref value as reported by ExtPlane's `u{type} {ref} {value}` update lines.
-enum ExtPlaneValue: Equatable {
+enum ExtPlaneValue: Equatable, Sendable {
     case int(Int)
     case float(Double)
     case double(Double)

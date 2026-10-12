@@ -2,7 +2,7 @@ import Foundation
 
 /// A line received from ExtPlane, as defined in the README's "Protocol Output"
 /// section, parsed into a typed event.
-enum ExtPlaneEvent: Equatable {
+enum ExtPlaneEvent: Equatable, Sendable {
     case connected(protocolVersion: Int)
     case serverVersion(Int)
     case clientID(String)
