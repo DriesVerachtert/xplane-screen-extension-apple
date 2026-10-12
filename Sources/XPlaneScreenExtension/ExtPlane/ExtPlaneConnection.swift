@@ -10,23 +10,37 @@ actor ExtPlaneConnection: ExtPlaneTransport {
     }
 
     nonisolated let events: AsyncStream<ExtPlaneEvent>
+    nonisolated let status: AsyncStream<ExtPlaneConnectionStatus>
 
-    private let continuation: AsyncStream<ExtPlaneEvent>.Continuation
+    private let eventsContinuation: AsyncStream<ExtPlaneEvent>.Continuation
+    private let statusContinuation: AsyncStream<ExtPlaneConnectionStatus>.Continuation
     private let queue = DispatchQueue(label: "eu.dries.xplanescreenextension.extplane-connection")
     private var connection: NWConnection?
     private var framer = ExtPlaneLineFramer()
 
     init() {
-        var continuation: AsyncStream<ExtPlaneEvent>.Continuation!
-        events = AsyncStream { continuation = $0 }
-        self.continuation = continuation
+        var eventsContinuation: AsyncStream<ExtPlaneEvent>.Continuation!
+        events = AsyncStream { eventsContinuation = $0 }
+        self.eventsContinuation = eventsContinuation
+
+        var statusContinuation: AsyncStream<ExtPlaneConnectionStatus>.Continuation!
+        status = AsyncStream { statusContinuation = $0 }
+        self.statusContinuation = statusContinuation
     }
 
-    func connect(host: String, port: UInt16) throws {
-        disconnect()
+    deinit {
+        eventsContinuation.finish()
+        statusContinuation.finish()
+    }
+
+    func connect(host: String, port: UInt16) async throws {
+        await disconnect()
+        statusContinuation.yield(.connecting)
 
         guard let nwPort = NWEndpoint.Port(rawValue: port) else {
-            throw Failure.invalidPort(port)
+            let failure = Failure.invalidPort(port)
+            statusContinuation.yield(.failed("Invalid port \(port)"))
+            throw failure
         }
 
         let connection = NWConnection(host: NWEndpoint.Host(host), port: nwPort, using: .tcp)
@@ -39,10 +53,11 @@ actor ExtPlaneConnection: ExtPlaneTransport {
         receiveNext(on: connection)
     }
 
-    func disconnect() {
+    func disconnect() async {
         connection?.cancel()
         connection = nil
         framer = ExtPlaneLineFramer()
+        statusContinuation.yield(.disconnected)
     }
 
     func send(_ command: ExtPlaneCommand) async throws {
@@ -72,11 +87,14 @@ actor ExtPlaneConnection: ExtPlaneTransport {
     private func handleReceive(connection: NWConnection, data: Data?, isComplete: Bool, error: Error?) {
         if let data, !data.isEmpty {
             for line in framer.append(data) {
-                continuation.yield(.parse(line: line))
+                eventsContinuation.yield(.parse(line: line))
             }
         }
         if isComplete || error != nil {
-            continuation.finish()
+            // Don't finish `events` here: it's shared across reconnects, and a
+            // finished AsyncStream can never deliver again. Just stop reading
+            // from this now-dead connection; `handleStateUpdate` reports the
+            // lifecycle change via `status`.
             return
         }
         // Another call to connect() may have replaced self.connection while
@@ -87,8 +105,12 @@ actor ExtPlaneConnection: ExtPlaneTransport {
 
     private func handleStateUpdate(_ state: NWConnection.State) {
         switch state {
-        case .failed, .cancelled:
-            continuation.finish()
+        case .ready:
+            statusContinuation.yield(.connected)
+        case let .failed(error):
+            statusContinuation.yield(.failed(error.localizedDescription))
+        case .cancelled:
+            statusContinuation.yield(.disconnected)
         default:
             break
         }
