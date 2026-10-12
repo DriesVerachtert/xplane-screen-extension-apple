@@ -26,6 +26,11 @@ struct ContentView: View {
                 Section {
                     statusRow
                     actionButton
+                    if viewModel.status == .connected {
+                        NavigationLink("Instruments") {
+                            InstrumentsView(store: viewModel.dataRefStore)
+                        }
+                    }
                 }
             }
             .formStyle(.grouped)

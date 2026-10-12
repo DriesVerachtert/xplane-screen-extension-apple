@@ -1,2 +1,3 @@
 --swiftversion 6.0
 --exclude Generated,XPlaneScreenExtension.xcodeproj
+--trailing-commas never
