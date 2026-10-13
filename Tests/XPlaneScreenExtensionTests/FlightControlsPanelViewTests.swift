@@ -2,6 +2,7 @@ import Testing
 @testable import XPlaneScreenExtension_macOS
 
 @Suite("FlightControlsPanelView state mapping")
+@MainActor
 struct FlightControlsPanelViewTests {
     @Test("parking brake is off when the dataref hasn't arrived yet")
     func parkingBrakeDefaultsOff() {
