@@ -11,78 +11,122 @@ struct LayoutStoreTests {
             .appendingPathComponent("layout.json")
     }
 
-    @Test("starts empty when no file exists yet")
-    func startsEmptyWithNoFile() {
+    @Test("starts with a single default page when no file exists yet")
+    func startsWithDefaultPage() {
         let store = LayoutStore(fileURL: temporaryFileURL())
-        #expect(store.page == .empty)
+        #expect(store.document.pages.count == 1)
+        #expect(store.document.pages[0].name == "Page 1")
+        #expect(store.selectedPage?.id == store.document.pages[0].id)
     }
 
-    @Test("starts empty when the file contains corrupt JSON")
-    func startsEmptyWithCorruptFile() throws {
+    @Test("starts with a default page when the file contains corrupt JSON")
+    func startsWithDefaultPageOnCorruptFile() throws {
         let url = temporaryFileURL()
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         try Data("not json".utf8).write(to: url)
 
         let store = LayoutStore(fileURL: url)
-        #expect(store.page == .empty)
+        #expect(store.document.pages.count == 1)
     }
 
-    @Test("addInstrument appends an item with a positive-size frame")
-    func addInstrumentAppends() {
+    @Test("addInstrument appends to the selected page only")
+    func addInstrumentAppendsToSelectedPage() {
         let store = LayoutStore(fileURL: temporaryFileURL())
+        let secondPageID = store.addPage(name: "Second")
+        store.selectPage(id: store.document.pages[0].id)
 
         store.addInstrument(.altimeter)
 
-        #expect(store.page.items.count == 1)
-        #expect(store.page.items[0].kind == .altimeter)
-        #expect(store.page.items[0].frame.width > 0)
-        #expect(store.page.items[0].frame.height > 0)
+        #expect(store.document.pages[0].items.count == 1)
+        #expect(store.document.pages.first { $0.id == secondPageID }?.items.isEmpty == true)
     }
 
-    @Test("removeInstrument removes only the matching item")
-    func removeInstrumentRemovesOnlyMatch() {
+    @Test("removeInstrument and updateFrame only affect the selected page's items")
+    func removeAndUpdateFrameScopedToSelectedPage() throws {
         let store = LayoutStore(fileURL: temporaryFileURL())
         store.addInstrument(.altimeter)
-        store.addInstrument(.airspeedIndicator)
-        let keptID = store.page.items[1].id
+        let id = try #require(store.selectedPage?.items.first?.id)
 
-        store.removeInstrument(id: store.page.items[0].id)
+        store.updateFrame(id: id, frame: CGRect(x: 1, y: 2, width: 3, height: 4))
+        #expect(store.selectedPage?.items[0].frame == CGRect(x: 1, y: 2, width: 3, height: 4))
 
-        #expect(store.page.items.map(\.id) == [keptID])
+        store.removeInstrument(id: id)
+        #expect(store.selectedPage?.items.isEmpty == true)
     }
 
-    @Test("updateFrame changes only the matching item's frame")
-    func updateFrameChangesMatch() {
+    @Test("addPage appends a new page and selects it")
+    func addPageAppendsAndSelects() {
         let store = LayoutStore(fileURL: temporaryFileURL())
-        store.addInstrument(.altimeter)
-        let id = store.page.items[0].id
-        let newFrame = CGRect(x: 10, y: 20, width: 300, height: 150)
 
-        store.updateFrame(id: id, frame: newFrame)
+        let newID = store.addPage(name: "Cruise")
 
-        #expect(store.page.items[0].frame == newFrame)
+        #expect(store.document.pages.count == 2)
+        #expect(store.document.pages[1].id == newID)
+        #expect(store.document.pages[1].name == "Cruise")
+        #expect(store.document.selectedPageID == newID)
     }
 
-    @Test("updateFrame for an unknown id is a no-op")
-    func updateFrameUnknownIDIsNoOp() {
+    @Test("selectPage switches the selection, and ignores an unknown id")
+    func selectPageSwitchesSelection() {
         let store = LayoutStore(fileURL: temporaryFileURL())
-        store.addInstrument(.altimeter)
-        let original = store.page
+        let firstID = store.document.pages[0].id
+        let secondID = store.addPage(name: "Second")
 
-        store.updateFrame(id: UUID(), frame: CGRect(x: 0, y: 0, width: 1, height: 1))
+        store.selectPage(id: firstID)
+        #expect(store.document.selectedPageID == firstID)
 
-        #expect(store.page == original)
+        store.selectPage(id: UUID())
+        #expect(store.document.selectedPageID == firstID)
+
+        store.selectPage(id: secondID)
+        #expect(store.document.selectedPageID == secondID)
+    }
+
+    @Test("removePage removes the page and falls back to the first remaining page if it was selected")
+    func removePageFallsBackSelection() {
+        let store = LayoutStore(fileURL: temporaryFileURL())
+        let firstID = store.document.pages[0].id
+        let secondID = store.addPage(name: "Second")
+        #expect(store.document.selectedPageID == secondID)
+
+        store.removePage(id: secondID)
+
+        #expect(store.document.pages.map(\.id) == [firstID])
+        #expect(store.document.selectedPageID == firstID)
+    }
+
+    @Test("removePage is a no-op when it's the last remaining page")
+    func removePageNoOpOnLastPage() {
+        let store = LayoutStore(fileURL: temporaryFileURL())
+        let onlyID = store.document.pages[0].id
+
+        store.removePage(id: onlyID)
+
+        #expect(store.document.pages.map(\.id) == [onlyID])
+    }
+
+    @Test("renamePage renames only the matching page")
+    func renamePageRenamesMatch() {
+        let store = LayoutStore(fileURL: temporaryFileURL())
+        let secondID = store.addPage(name: "Second")
+
+        store.renamePage(id: secondID, name: "Renamed")
+
+        #expect(store.document.pages[1].name == "Renamed")
+        #expect(store.document.pages[0].name == "Page 1")
     }
 
     @Test("changes persist to disk and are reloaded by a new store over the same file")
-    func persistsAndReloads() {
+    func persistsAndReloads() throws {
         let url = temporaryFileURL()
         let store = LayoutStore(fileURL: url)
+        store.addPage(name: "Second")
         store.addInstrument(.attitudeIndicator)
-        store.updateFrame(id: store.page.items[0].id, frame: CGRect(x: 5, y: 6, width: 220, height: 220))
+        let id = try #require(store.selectedPage?.items.first?.id)
+        store.updateFrame(id: id, frame: CGRect(x: 5, y: 6, width: 220, height: 220))
 
         let reloaded = LayoutStore(fileURL: url)
 
-        #expect(reloaded.page == store.page)
+        #expect(reloaded.document == store.document)
     }
 }

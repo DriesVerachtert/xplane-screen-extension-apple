@@ -13,10 +13,27 @@ struct PlacedInstrument: Identifiable, Codable, Sendable, Equatable {
     }
 }
 
-/// A freeform arrangement of instruments. Just one page for now (step 6);
-/// multiple named/switchable pages come later (step 7).
-struct Page: Codable, Sendable, Equatable {
+/// A single named, freeform arrangement of instruments. A `LayoutDocument`
+/// holds several, switchable via the layout editor's page strip.
+struct Page: Identifiable, Codable, Sendable, Equatable {
+    let id: UUID
+    var name: String
     var items: [PlacedInstrument]
 
-    static let empty = Page(items: [])
+    init(id: UUID = UUID(), name: String, items: [PlacedInstrument] = []) {
+        self.id = id
+        self.name = name
+        self.items = items
+    }
+}
+
+/// The whole persisted layout: every page, and which one is currently shown.
+struct LayoutDocument: Codable, Sendable, Equatable {
+    var pages: [Page]
+    var selectedPageID: UUID
+
+    static let empty: LayoutDocument = {
+        let page = Page(name: "Page 1")
+        return LayoutDocument(pages: [page], selectedPageID: page.id)
+    }()
 }
