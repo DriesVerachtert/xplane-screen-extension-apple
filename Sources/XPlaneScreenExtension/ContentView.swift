@@ -27,8 +27,8 @@ struct ContentView: View {
                     statusRow
                     actionButton
                     if viewModel.status == .connected {
-                        NavigationLink("Instruments") {
-                            InstrumentsView(store: viewModel.dataRefStore)
+                        NavigationLink("Layout") {
+                            LayoutEditorView(dataRefStore: viewModel.dataRefStore)
                         }
                     }
                 }
