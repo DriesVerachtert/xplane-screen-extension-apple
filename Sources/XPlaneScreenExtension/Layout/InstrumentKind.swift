@@ -6,6 +6,7 @@ enum InstrumentKind: String, Codable, CaseIterable, Identifiable, Sendable {
     case altimeter
     case airspeedIndicator
     case attitudeIndicator
+    case flightControls
 
     var id: String {
         rawValue
@@ -16,6 +17,16 @@ enum InstrumentKind: String, Codable, CaseIterable, Identifiable, Sendable {
         case .altimeter: "Altimeter"
         case .airspeedIndicator: "Airspeed Indicator"
         case .attitudeIndicator: "Attitude Indicator"
+        case .flightControls: "Flight Controls"
+        }
+    }
+
+    /// The size a newly-added item starts at -- gauges want a square, the
+    /// controls panel wants room for its rows of buttons.
+    var defaultSize: CGSize {
+        switch self {
+        case .altimeter, .airspeedIndicator, .attitudeIndicator: CGSize(width: 200, height: 200)
+        case .flightControls: CGSize(width: 220, height: 260)
         }
     }
 
@@ -25,6 +36,7 @@ enum InstrumentKind: String, Codable, CaseIterable, Identifiable, Sendable {
         case .altimeter: AltimeterView(store: store)
         case .airspeedIndicator: AirspeedIndicatorView(store: store)
         case .attitudeIndicator: AttitudeIndicatorView(store: store)
+        case .flightControls: FlightControlsPanelView(store: store)
         }
     }
 }

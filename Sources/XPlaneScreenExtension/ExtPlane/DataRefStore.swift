@@ -65,4 +65,10 @@ final class DataRefStore {
         guard case let .update(ref, value) = event else { return }
         values[ref] = value
     }
+
+    /// Sends a one-off command (a button press, a direct `set`) without
+    /// subscribing to anything.
+    func send(_ command: ExtPlaneCommand) async {
+        try? await transport.send(command)
+    }
 }

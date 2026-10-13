@@ -38,9 +38,9 @@ final class LayoutStore {
     }
 
     func addInstrument(_ kind: InstrumentKind) {
-        let defaultSize: CGFloat = 200
+        let size = kind.defaultSize
         let cascade = CGFloat(page.items.count % 5) * 24
-        let frame = CGRect(x: 20 + cascade, y: 20 + cascade, width: defaultSize, height: defaultSize)
+        let frame = CGRect(x: 20 + cascade, y: 20 + cascade, width: size.width, height: size.height)
         page.items.append(PlacedInstrument(kind: kind, frame: frame))
         save()
     }

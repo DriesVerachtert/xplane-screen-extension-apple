@@ -80,6 +80,17 @@ struct DataRefStoreTests {
         #expect(store.value(for: "a/b") == nil)
     }
 
+    @Test("send forwards a one-off command without subscribing")
+    func sendForwardsCommandWithoutSubscribing() async {
+        let transport = MockExtPlaneTransport()
+        let store = DataRefStore(transport: transport)
+
+        await store.send(.commandOnce("sim/flight_controls/landing_gear_toggle"))
+
+        let sent = await transport.sentCommands
+        #expect(sent == [.commandOnce("sim/flight_controls/landing_gear_toggle")])
+    }
+
     @Test("an update event pushed through the transport's event stream updates the store")
     func eventsFlowThroughTransport() async {
         let transport = MockExtPlaneTransport()
