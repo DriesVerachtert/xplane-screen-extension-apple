@@ -11,6 +11,10 @@ struct RadialGaugeView: View {
     let needleValue: Double
     let needleRange: ClosedRange<Double>
     var majorTicks: Int = 10
+    /// An optional "do not exceed" value, marked with a red tick distinct
+    /// from the regular white ones (e.g. an aircraft's Vne on the airspeed
+    /// indicator). `nil` draws nothing.
+    var redlineValue: Double?
 
     private let startAngle: Double = -130
     private let endAngle: Double = 130
@@ -25,13 +29,15 @@ struct RadialGaugeView: View {
                     tickMark(index: tick, size: size)
                 }
 
+                redlineMark(size: size)
+
                 readout(size: size)
 
                 Capsule()
                     .fill(.red)
                     .frame(width: size * 0.025, height: size * 0.4)
                     .offset(y: -size * 0.2)
-                    .rotationEffect(.degrees(needleAngle))
+                    .rotationEffect(.degrees(angle(forValue: needleValue)))
 
                 Circle()
                     .fill(.white)
@@ -45,7 +51,11 @@ struct RadialGaugeView: View {
 
     /// Internal rather than private so it's directly unit-testable.
     var needleAngle: Double {
-        let clamped = min(max(needleValue, needleRange.lowerBound), needleRange.upperBound)
+        angle(forValue: needleValue)
+    }
+
+    private func angle(forValue value: Double) -> Double {
+        let clamped = min(max(value, needleRange.lowerBound), needleRange.upperBound)
         let span = needleRange.upperBound - needleRange.lowerBound
         let fraction = span == 0 ? 0 : (clamped - needleRange.lowerBound) / span
         return startAngle + fraction * (endAngle - startAngle)
@@ -59,6 +69,17 @@ struct RadialGaugeView: View {
             .frame(width: size * 0.015, height: size * 0.08)
             .offset(y: -size * 0.44)
             .rotationEffect(.degrees(angle))
+    }
+
+    @ViewBuilder
+    private func redlineMark(size: Double) -> some View {
+        if let redlineValue, needleRange.contains(redlineValue) {
+            Rectangle()
+                .fill(.red)
+                .frame(width: size * 0.025, height: size * 0.1)
+                .offset(y: -size * 0.44)
+                .rotationEffect(.degrees(angle(forValue: redlineValue)))
+        }
     }
 
     private func readout(size: Double) -> some View {
@@ -82,9 +103,16 @@ struct RadialGaugeView: View {
         .background(Color.gray.opacity(0.2))
 }
 
-#Preview("Airspeed-style") {
-    RadialGaugeView(title: "IAS", valueText: "118", unit: "KT", needleValue: 118, needleRange: 0 ... 200)
-        .frame(width: 220, height: 220)
-        .padding()
-        .background(Color.gray.opacity(0.2))
+#Preview("Airspeed-style, approaching Vne") {
+    RadialGaugeView(
+        title: "IAS",
+        valueText: "340",
+        unit: "KT",
+        needleValue: 340,
+        needleRange: 0 ... 345,
+        redlineValue: 300
+    )
+    .frame(width: 220, height: 220)
+    .padding()
+    .background(Color.gray.opacity(0.2))
 }
